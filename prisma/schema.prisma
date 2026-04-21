@@ -1,0 +1,235 @@
+// ============================================================
+// Prisma Schema — Event Management Platform
+// Prisma 6+ (url dipindah ke prisma.config.ts)
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Role {
+  CUSTOMER
+  ORGANIZER
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  CANCELLED
+  FAILED
+}
+
+
+enum PointStatus {
+  ACTIVE
+  EXPIRED
+  USED
+}
+
+enum PromotionType {
+  DATE_BASED
+  REFERRAL
+}
+
+// ============================================================
+// USER & AUTH
+// ============================================================
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  password     String
+  role         Role
+  referralCode String   @unique
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  eventsCreated  Event[]          @relation("OrganizerEvents")
+  transactions   Transaction[]
+  points         Point[]
+  coupons        DiscountCoupon[]
+  reviews        Review[]
+
+  @@map("users")
+}
+
+// ============================================================
+// EVENT
+// ============================================================
+
+model Category {
+  id     String  @id @default(uuid())
+  name   String  @unique
+  slug   String  @unique
+  events Event[]
+
+  @@map("categories")
+}
+
+model Event {
+  id             String      @id @default(uuid())
+  organizerId    String
+  categoryId     String
+  title          String
+  slug           String      @unique
+  description    String      @db.Text
+  location       String
+  startDate      DateTime
+  endDate        DateTime
+  price          Int
+  isFree         Boolean     @default(false)
+  availableSeats Int
+  bookedSeats    Int         @default(0)
+  imageUrl       String?
+  status         EventStatus @default(DRAFT)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  organizer    User          @relation("OrganizerEvents", fields: [organizerId], references: [id])
+  category     Category      @relation(fields: [categoryId], references: [id])
+  transactions Transaction[]
+  promotions   Promotion[]
+  reviews      Review[]
+
+  @@index([organizerId])
+  @@index([categoryId])
+  @@index([startDate])
+  @@index([isFree])
+  @@map("events")
+}
+
+// ============================================================
+// PROMOTION
+// ============================================================
+
+model Promotion {
+  id            String        @id @default(uuid())
+  eventId       String
+  type          PromotionType
+  code          String?       @unique
+  discountValue Int
+  quota         Int?
+  usedCount     Int           @default(0)
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime      @default(now())
+
+  event        Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([eventId])
+  @@index([code])
+  @@map("promotions")
+}
+
+// ============================================================
+// TRANSACTION
+// ============================================================
+
+model Transaction {
+  id             String            @id @default(uuid())
+  customerId     String
+  eventId        String
+  quantity       Int               @default(1)
+  basePrice      Int
+  discountAmount Int               @default(0)
+  pointsUsed     Int               @default(0)
+  finalPrice     Int
+  status         TransactionStatus @default(PENDING)
+  snapToken      String?
+  paymentUrl     String?
+  promotionId    String?
+  couponId       String?
+  createdAt      DateTime          @default(now())
+
+  customer  User            @relation(fields: [customerId], references: [id])
+  event     Event           @relation(fields: [eventId], references: [id])
+  promotion Promotion?      @relation(fields: [promotionId], references: [id])
+  coupon    DiscountCoupon? @relation(fields: [couponId], references: [id])
+
+  @@index([customerId])
+  @@index([eventId])
+  @@map("transactions")
+}
+
+// ============================================================
+// POINTS
+// ============================================================
+
+model Point {
+  id         String      @id @default(uuid())
+  userId     String
+  amount     Int
+  status     PointStatus @default(ACTIVE)
+  expiresAt  DateTime
+  createdAt  DateTime    @default(now())
+  redeemedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("points")
+}
+
+// ============================================================
+// DISCOUNT COUPON
+// ============================================================
+
+model DiscountCoupon {
+  id        String    @id @default(uuid())
+  userId    String
+  code      String    @unique
+  discount  Int       @default(10)
+  isUsed    Boolean   @default(false)
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  usedAt    DateTime?
+
+  user         User          @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+
+  @@index([userId])
+  @@index([code])
+  @@map("discount_coupons")
+}
+
+// ============================================================
+// REVIEW
+// ============================================================
+
+model Review {
+  id        String   @id @default(uuid())
+  userId    String
+  eventId   String
+  rating    Int
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id])
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([eventId])
+  @@map("reviews")
+}
