@@ -62,9 +62,9 @@ app.use((_req, res) => {
   res.sendError(404, "Endpoint not found", "NOT_FOUND");
 });
 
-// app.listen(PORT, () => {
-//   console.log(`🚀 Server running on http://localhost:${PORT}`);
-//   console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
-// });
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
+});
 
 export default app;
