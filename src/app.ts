@@ -3,7 +3,10 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { responseMiddleware, errorHandler } from "./middlewares/response.middleware.js";
+import {
+  responseMiddleware,
+  errorHandler,
+} from "./middlewares/response.middleware.js";
 import authRouter from "./modules/auth/auth.router.js";
 import eventRouter from "./modules/event/event.router.js";
 import transactionRouter from "./modules/transaction/transaction.router.js";
@@ -59,9 +62,9 @@ app.use((_req, res) => {
   res.sendError(404, "Endpoint not found", "NOT_FOUND");
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
-});
+// app.listen(PORT, () => {
+//   console.log(`🚀 Server running on http://localhost:${PORT}`);
+//   console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
+// });
 
 export default app;
