@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "dev": "tsx --watch src/app.ts",
     "start": "npm run build && node dist/app.js",
     "test": "jest",
