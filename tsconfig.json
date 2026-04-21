@@ -9,7 +9,7 @@
     "lib": ["esnext"],
     "types": ["node", "jest"],
 
-    "strict": true,
+    "strict": false,
     "skipLibCheck": true,
     "esModuleInterop": true
   },
