@@ -67,7 +67,6 @@ model User {
   points         Point[]
   coupons        DiscountCoupon[]
   reviews        Review[]
-
   @@map("users")
 }
 
