@@ -8,7 +8,7 @@ import {
 import * as eventService from "./event.service.js";
 
 export async function getEvents(req: Request, res: Response) {
-  const parsed = eventQuerySchema.safeParse(req.query);
+  const parsed = eventQuerySchema.safeParse(req.query); //
   if (!parsed.success) {
     res.status(400).json({
       message: "Invalid query parameters",
@@ -18,7 +18,7 @@ export async function getEvents(req: Request, res: Response) {
   }
 
   try {
-    const result = await eventService.getEvents(parsed.data);
+    const result = await eventService.getEvents(parsed.data); // panggil service getEvents
     res.status(200).json(result);
   } catch (error) {
     const message =

@@ -12,24 +12,28 @@ router.get("/:id", eventController.getEventById);
 
 // Organizer only routes
 router.get(
+  // route untuk organizer melihat event-event yang dia buat
   "/organizer/my-events",
   verifyToken,
   requireRole("ORGANIZER"),
   eventController.getOrganizerEvents,
 );
 router.post(
+  // route untuk organizer membuat event baru
   "/",
   verifyToken,
   requireRole("ORGANIZER"),
   eventController.createEvent,
 );
 router.put(
+  // route untuk organizer mengupdate event yang dia buat
   "/:id",
   verifyToken,
   requireRole("ORGANIZER"),
   eventController.updateEvent,
 );
 router.delete(
+  // route untuk organizer menghapus event yang dia buat
   "/:id",
   verifyToken,
   requireRole("ORGANIZER"),

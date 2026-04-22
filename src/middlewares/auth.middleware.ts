@@ -20,6 +20,7 @@ declare global {
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
 export function verifyToken(req: Request, res: Response, next: NextFunction) {
+  // periksa token
   const token = req.cookies?.token;
 
   if (!token) {
@@ -37,6 +38,7 @@ export function verifyToken(req: Request, res: Response, next: NextFunction) {
 }
 
 export function requireRole(...roles: ("CUSTOMER" | "ORGANIZER")[]) {
+  // periksa role
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
       res.status(401).json({ message: "Unauthorized" });

@@ -8,8 +8,8 @@ const router = Router({ mergeParams: true });
 // GET /api/events/:id/promotions — organizer only
 router.get(
   "/",
-  verifyToken,
-  requireRole("ORGANIZER"),
+  verifyToken, // middleware untuk verifikasi token JWT
+  requireRole("ORGANIZER"), // middleware untuk cek role ORGANIZER
   promotionController.getEventPromotions,
 );
 

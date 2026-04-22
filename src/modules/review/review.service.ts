@@ -65,6 +65,7 @@ export async function getEventReviews(eventId: string) {
       },
     }),
     prisma.review.aggregate({
+      // hitung rata-rata rating dan total review untuk event ini
       where: { eventId },
       _avg: { rating: true },
       _count: { rating: true },
@@ -77,6 +78,7 @@ export async function getEventReviews(eventId: string) {
       averageRating: aggregate._avg.rating
         ? Math.round(aggregate._avg.rating * 10) / 10
         : 0,
+      // contoh : 4.666 * 10 = 46.66 -> dibulatkan jadi 47 -> dibagi 10 lagi jadi 4.7
       totalReviews: aggregate._count.rating,
     },
   };

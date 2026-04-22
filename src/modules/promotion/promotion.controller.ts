@@ -4,7 +4,7 @@ import { createPromotionSchema } from "./promotion.validation.js";
 import * as promotionService from "./promotion.service.js";
 
 export async function createPromotion(req: Request, res: Response) {
-  const parsed = createPromotionSchema.safeParse(req.body);
+  const parsed = createPromotionSchema.safeParse(req.body); // validasi input
   if (!parsed.success) {
     res.status(400).json({
       message: "Validation error",
@@ -15,7 +15,7 @@ export async function createPromotion(req: Request, res: Response) {
 
   try {
     const promotion = await promotionService.createPromotion(
-      req.params.id as string,
+      req.params.id as string, // hasil dari url yg dipanggil user, yaitu eventId
       req.user!.id as string,
       parsed.data,
     );
@@ -36,6 +36,7 @@ export async function createPromotion(req: Request, res: Response) {
 }
 
 export async function getEventPromotions(req: Request, res: Response) {
+  // cek event exist & milik organizer ini
   try {
     const promotions = await promotionService.getEventPromotions(
       req.params.id as string,
@@ -52,8 +53,10 @@ export async function getEventPromotions(req: Request, res: Response) {
 }
 
 export async function deletePromotion(req: Request, res: Response) {
+  // cek promo exist & milik organizer ini
   try {
     await promotionService.deletePromotion(
+      // service deletePromotion
       req.params.promotionId as string,
       req.user!.id as string,
     );
@@ -77,6 +80,7 @@ export async function validatePromoCode(req: Request, res: Response) {
   const { code, eventId } = req.body;
 
   if (!code || !eventId) {
+    // validasi input sederhana
     res.status(400).json({ message: "code and eventId are required" });
     return;
   }

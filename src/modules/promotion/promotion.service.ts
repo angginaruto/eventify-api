@@ -17,7 +17,7 @@ export async function createPromotion(
     throw new Error("Cannot add promotion to a cancelled or completed event");
   }
 
-  // cek duplikat code jika REFERRAL
+  // cek duplikat code jika REFERRAL saat membuat referral promotion
   if (input.type === "REFERRAL" && input.code) {
     const existing = await prisma.promotion.findUnique({
       where: { code: input.code },
@@ -30,10 +30,10 @@ export async function createPromotion(
       eventId,
       type: input.type,
       discountValue: input.discountValue,
-      code: input.code ?? null,
-      quota: input.quota ?? null,
-      startDate: input.startDate ?? null,
-      endDate: input.endDate ?? null,
+      code: input.code ?? null, // referal
+      quota: input.quota ?? null, // referal
+      startDate: input.startDate ?? null, // data based
+      endDate: input.endDate ?? null, // date based
     },
   });
 
@@ -43,6 +43,7 @@ export async function createPromotion(
 // ── GET /events/:id/promotions ────────────────────────────────
 
 export async function getEventPromotions(eventId: string, organizerId: string) {
+  // cek event exist & milik organizer ini
   const event = await prisma.event.findUnique({ where: { id: eventId } });
   if (!event) throw new Error("Event not found");
   if (event.organizerId !== organizerId) throw new Error("Forbidden");
@@ -57,7 +58,7 @@ export async function getEventPromotions(eventId: string, organizerId: string) {
 
 // ── DELETE /promotions/:id ────────────────────────────────────
 
-export async function deletePromotion(
+export async function deletePromotion( // cek promo exist & milik organizer ini
   promotionId: string,
   organizerId: string,
 ) {

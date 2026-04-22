@@ -12,7 +12,7 @@ router.get("/", reviewController.getEventReviews);
 
 // POST /api/events/:id/reviews — customer only
 router.post(
-  "/",
+  "/", // route untuk membuat review baru untuk event dengan id tertentu
   verifyToken,
   requireRole("CUSTOMER"),
   reviewController.createReview,

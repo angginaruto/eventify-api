@@ -4,7 +4,7 @@ import { createReviewSchema } from "./review.validation.js";
 import * as reviewService from "./review.service.js";
 
 export async function createReview(req: Request, res: Response) {
-  const parsed = createReviewSchema.safeParse(req.body);
+  const parsed = createReviewSchema.safeParse(req.body); // validasi input
   if (!parsed.success) {
     res.status(400).json({
       message: "Validation error",
@@ -15,6 +15,7 @@ export async function createReview(req: Request, res: Response) {
 
   try {
     const review = await reviewService.createReview(
+      // panggil service createReview
       req.params.id as string,
       req.user!.id as string,
       parsed.data,

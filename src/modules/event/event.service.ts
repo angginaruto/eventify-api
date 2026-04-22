@@ -7,6 +7,7 @@ import type {
 } from "./event.validation.js";
 
 function generateSlug(title: string): string {
+  // slug dibuat dari title yang di-lowercase, spasi diganti dengan dash, dan ditambah timestamp untuk memastikan unik
   return (
     title
       .toLowerCase()
@@ -23,52 +24,54 @@ function generateSlug(title: string): string {
 export async function getEvents(query: EventQuery) {
   const { search, categoryId, location, type, status, startDate, page, limit } =
     query;
-  const skip = (page - 1) * limit;
+  const skip = (page - 1) * limit; // untuk pagination, skip dihitung dari page dan limit
 
   const where: any = {
-    ...(status ? { status } : { status: "PUBLISHED" }),
-    ...(categoryId && { categoryId }),
+    ...(status ? { status } : { status: { in: ["PUBLISHED", "COMPLETED"] } }), // { status: "PUBLISHED" }), // default hanya tampilkan yang PUBLISHED kalau tidak ada filter status
+    ...(categoryId && { categoryId }), // filter by category
     ...(location && {
       location: { contains: location, mode: "insensitive" },
     }),
-    ...(type === "free" && { isFree: true }),
+    ...(type === "free" && { isFree: true }), // filter by free/paid
     ...(type === "paid" && { isFree: false }),
     ...(startDate && { startDate: { gte: startDate } }),
     ...(search && {
       OR: [
-        { title: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-        { location: { contains: search, mode: "insensitive" } },
+        { title: { contains: search, mode: "insensitive" } }, // search by title
+        { description: { contains: search, mode: "insensitive" } }, // search by description
+        { location: { contains: search, mode: "insensitive" } }, // search by location
       ],
     }),
   };
 
   const [events, total] = await Promise.all([
+    // promise all untuk eksekusi query findMany dan count secara bersamaan agar lebih efisien
     prisma.event.findMany({
-      where,
-      skip,
+      where, // filter
+      skip, // offset
       take: limit,
-      orderBy: { startDate: "asc" },
+      orderBy: { startDate: "asc" }, // urutkan dari tanggal terdekat
       include: {
-        category: { select: { id: true, name: true, slug: true } },
-        organizer: { select: { id: true, name: true, avatarUrl: true } },
-        _count: { select: { reviews: true } },
+        category: { select: { id: true, name: true, slug: true } }, // include data category tapi hanya id, name, slug
+        organizer: { select: { id: true, name: true, avatarUrl: true } }, // include data organizer tapi hanya id, name, avatarUrl
+        _count: { select: { reviews: true } }, // include count reviews untuk hitung rata-rata rating nanti, tapi tidak perlu count transactions karena tidak ditampilkan di list
       },
     }),
-    prisma.event.count({ where }),
+    prisma.event.count({ where }), // hitung total data untuk pagination, gunakan filter yang sama dengan findMany agar total sesuai dengan jumlah data yang ditampilkan berdasarkan filter
   ]);
 
   // hitung rata-rata rating per event
   const eventsWithRating = await Promise.all(
     events.map(async (event) => {
+      // loop semua event
       const avg = await prisma.review.aggregate({
         where: { eventId: event.id },
-        _avg: { rating: true },
+        _avg: { rating: true }, // hitung rata-rata rating
       });
       return {
-        ...event,
-        averageRating: avg._avg.rating ?? 0,
-        reviewCount: event._count.reviews,
+        ...event, // semua data event
+        averageRating: avg._avg.rating ?? 0, // rata-rata rating, kalau tidak ada rating (null) jadi 0
+        reviewCount: event._count.reviews, // jumlah review, diambil dari count yang sudah include di query findMany, jadi tidak perlu query lagi
       };
     }),
   );
@@ -87,7 +90,9 @@ export async function getEvents(query: EventQuery) {
 // ── GET /events/:id ───────────────────────────────────────────
 
 export async function getEventById(id: string) {
+  // id diambil dari req.params.id yang sudah pasti string
   const event = await prisma.event.findUnique({
+    // cari event berdasarkan id
     where: { id },
     include: {
       category: true,
@@ -104,6 +109,7 @@ export async function getEventById(id: string) {
   if (!event) throw new Error("Event not found");
 
   const avg = await prisma.review.aggregate({
+    // hitung rata-rata rating untuk event ini
     where: { eventId: id },
     _avg: { rating: true },
   });
@@ -121,11 +127,12 @@ export async function createEvent(
   organizerId: string,
   input: CreateEventInput,
 ) {
-  const { price, ...rest } = input;
-  const isFree = price === 0;
-  const slug = generateSlug(input.title);
+  const { price, ...rest } = input; // price diambil terpisah untuk hitung isFree, sisanya disebar ke data event
+  const isFree = price === 0; // event dianggap free jika prixe 0
+  const slug = generateSlug(input.title); // buat slug dari title, pastikan unik dengan menambahkan timestamp di akhir
 
   const event = await prisma.event.create({
+    // buat event baru di database
     data: {
       ...rest,
       price,
@@ -149,6 +156,7 @@ export async function updateEvent(
   organizerId: string,
   input: UpdateEventInput,
 ) {
+  // update event berdasarkan id, pastikan event milik organizer yang sedang login
   const event = await prisma.event.findUnique({ where: { id } });
   if (!event) throw new Error("Event not found");
   if (event.organizerId !== organizerId) throw new Error("Forbidden");
@@ -157,9 +165,10 @@ export async function updateEvent(
   const isFree = price !== undefined ? price === 0 : undefined;
 
   const updated = await prisma.event.update({
+    // update event di database
     where: { id },
     data: {
-      ...rest,
+      ...rest, // update semua field yang diinput
       ...(price !== undefined && { price, isFree }),
     },
     include: {
@@ -191,22 +200,23 @@ export async function deleteEvent(id: string, organizerId: string) {
 
 // ── GET /events/organizer (list event milik organizer) ────────
 
-export async function getOrganizerEvents(
+export async function getOrganizerEvents( // ambil list event milik organizer
   organizerId: string,
   query: EventQuery,
 ) {
-  const { page, limit, status, search } = query;
+  const { page, limit, status, search } = query; // untuk pagination, filter by status, dan search by title
   const skip = (page - 1) * limit;
 
   const where: any = {
-    organizerId,
-    ...(status && { status }),
+    organizerId, // pastikan hanya ambil event milik organizer yang sedang login
+    ...(status && { status }), // filter by status jika diberikan
     ...(search && {
       title: { contains: search, mode: "insensitive" },
     }),
   };
 
   const [events, total] = await Promise.all([
+    // promise all untuk eksekusi query findMany dan count secara bersamaan agar lebih efisien
     prisma.event.findMany({
       where,
       skip,
@@ -235,6 +245,7 @@ export async function getOrganizerEvents(
 
 export async function getCategories() {
   return await prisma.category.findMany({
+    // ambil semua category untuk dropdown di form create/update event
     orderBy: { name: "asc" },
   });
 }

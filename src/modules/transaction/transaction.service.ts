@@ -41,11 +41,11 @@ async function redeemPoints(
         where: { id: point.id },
         data: { status: "USED", redeemedAt: new Date() },
       });
-      remaining -= point.amount;
+      remaining -= point.amount; // kurangi remaining dengan jumlah poin yang sudah dipakai
     } else {
       await tx.point.update({
         where: { id: point.id },
-        data: { amount: point.amount - remaining },
+        data: { amount: point.amount - remaining }, // update jumlah poin yang tersisa
       });
       remaining = 0;
     }
@@ -162,6 +162,7 @@ export async function createTransaction(
   // 8. buat Snap token via Midtrans
   const snapParams = {
     transaction_details: {
+      // kirim detail transaksi ke Midtrans
       order_id: transaction.id,
       gross_amount: finalPrice,
     },
@@ -205,7 +206,7 @@ export async function createTransaction(
 // ── Webhook dari Midtrans ─────────────────────────────────────
 
 export async function handleMidtransWebhook(notification: any) {
-  const { order_id, transaction_status, fraud_status } = notification;
+  const { order_id, transaction_status, fraud_status } = notification; // baca status midtrans
 
   const transaction = await prisma.transaction.findUnique({
     where: { id: order_id },
@@ -216,10 +217,13 @@ export async function handleMidtransWebhook(notification: any) {
   let newStatus: "PENDING" | "SUCCESS" | "CANCELLED" | "FAILED" = "PENDING";
 
   if (transaction_status === "capture") {
+    // kalau diproses
     newStatus = fraud_status === "accept" ? "SUCCESS" : "FAILED";
   } else if (transaction_status === "settlement") {
+    // kalau sudah selesai
     newStatus = "SUCCESS";
   } else if (
+    // gagal
     transaction_status === "cancel" ||
     transaction_status === "deny" ||
     transaction_status === "expire"
@@ -228,7 +232,7 @@ export async function handleMidtransWebhook(notification: any) {
     // kembalikan seats jika dibatalkan
     await prisma.event.update({
       where: { id: transaction.eventId },
-      data: { bookedSeats: { decrement: transaction.quantity } },
+      data: { bookedSeats: { decrement: transaction.quantity } }, // kursi dikembalikan jika gagal
     });
   } else if (transaction_status === "pending") {
     newStatus = "PENDING";

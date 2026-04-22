@@ -19,19 +19,19 @@ router.get(
   "/my",
   verifyToken,
   requireRole("CUSTOMER"),
-  transactionController.getMyTransactions,
+  transactionController.getMyTransactions, // route untuk customer melihat transaksi-transaksi yang dia lakukan
 );
 router.get(
   "/points/me",
   verifyToken,
   requireRole("CUSTOMER"),
-  transactionController.getMyPoints,
+  transactionController.getMyPoints, // route untuk customer melihat jumlah poin yang dia punya
 );
 router.get(
   "/coupons/me",
   verifyToken,
   requireRole("CUSTOMER"),
-  transactionController.getMyCoupons,
+  transactionController.getMyCoupons, // route untuk customer melihat daftar kupon yang dia punya
 );
 
 // Organizer routes
@@ -39,7 +39,7 @@ router.get(
   "/event/:id",
   verifyToken,
   requireRole("ORGANIZER"),
-  transactionController.getEventTransactions,
+  transactionController.getEventTransactions, // route untuk organizer melihat transaksi-transaksi yang terjadi di event yang dia buat
 );
 
 export default router;

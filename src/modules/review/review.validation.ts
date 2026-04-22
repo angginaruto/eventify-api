@@ -2,6 +2,7 @@
 import { z } from "zod";
 
 export const createReviewSchema = z.object({
+  // validasi input untuk membuat review
   rating: z
     .number()
     .int()

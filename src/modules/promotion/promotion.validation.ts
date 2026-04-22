@@ -6,16 +6,16 @@ export const createPromotionSchema = z
     type: z.enum(["DATE_BASED", "REFERRAL"]),
     discountValue: z.number().int().min(1, "Discount must be at least 1"),
     // REFERRAL only
-    code: z.string().min(3).max(20).optional(),
-    quota: z.number().int().min(1).optional(),
+    code: z.string().min(3).max(20).optional(), // kode referal unik, 3-20 karakter
+    quota: z.number().int().min(1).optional(), // jumlah maksimal penggunaan kode referal
     // DATE_BASED only
-    startDate: z.coerce.date().optional(),
-    endDate: z.coerce.date().optional(),
+    startDate: z.coerce.date().optional(), // tanggal mulai berlakunya promosi
+    endDate: z.coerce.date().optional(), // tanggal berakhirnya promosi
   })
   .refine(
     (data) => {
       if (data.type === "REFERRAL") {
-        return !!data.code && !!data.quota;
+        return !!data.code && !!data.quota; // code dan quota harus ada
       }
       return true;
     },
@@ -24,7 +24,7 @@ export const createPromotionSchema = z
   .refine(
     (data) => {
       if (data.type === "DATE_BASED") {
-        return !!data.startDate && !!data.endDate;
+        return !!data.startDate && !!data.endDate; // startDate dan endDate harus ada
       }
       return true;
     },
@@ -36,7 +36,7 @@ export const createPromotionSchema = z
   .refine(
     (data) => {
       if (data.type === "DATE_BASED" && data.startDate && data.endDate) {
-        return data.endDate > data.startDate;
+        return data.endDate > data.startDate; // endDate harus setelah startDate
       }
       return true;
     },
