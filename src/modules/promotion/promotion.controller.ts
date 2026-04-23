@@ -40,7 +40,7 @@ export async function getEventPromotions(req: Request, res: Response) {
   try {
     const promotions = await promotionService.getEventPromotions(
       req.params.id as string,
-      req.user!.id as string,
+      // req.user!.id as string,
     );
     res.status(200).json({ data: promotions });
   } catch (error) {

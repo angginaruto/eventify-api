@@ -42,11 +42,11 @@ export async function createPromotion(
 
 // ── GET /events/:id/promotions ────────────────────────────────
 
-export async function getEventPromotions(eventId: string, organizerId: string) {
+export async function getEventPromotions(eventId: string) {
   // cek event exist & milik organizer ini
   const event = await prisma.event.findUnique({ where: { id: eventId } });
   if (!event) throw new Error("Event not found");
-  if (event.organizerId !== organizerId) throw new Error("Forbidden");
+  // if (event.organizerId !== organizerId) throw new Error("Forbidden");
 
   const promotions = await prisma.promotion.findMany({
     where: { eventId },

@@ -71,34 +71,90 @@ export async function createTransaction(
     throw new Error(`Only ${seatsLeft} seat(s) available`);
 
   // 3. cek kupon
+  // 3. cek kupon / promo
   let coupon = null;
+  let referralPromo = null;
+
   if (couponCode) {
+    // cek user coupon
     coupon = await prisma.discountCoupon.findUnique({
       where: { code: couponCode },
     });
-    if (!coupon) throw new Error("Invalid coupon code");
-    if (coupon.userId !== customerId)
-      throw new Error("Coupon does not belong to you");
-    if (coupon.isUsed) throw new Error("Coupon has already been used");
-    if (coupon.expiresAt < new Date()) throw new Error("Coupon has expired");
+
+    if (coupon) {
+      if (coupon.userId !== customerId)
+        throw new Error("Coupon does not belong to you");
+      if (coupon.isUsed) throw new Error("Coupon has already been used");
+      if (coupon.expiresAt < new Date()) throw new Error("Coupon has expired");
+    } else {
+      // cek referral promo
+      referralPromo = await prisma.promotion.findFirst({
+        where: {
+          eventId,
+          type: "REFERRAL",
+          code: couponCode,
+        },
+      });
+
+      if (!referralPromo) throw new Error("Invalid coupon code");
+
+      if (
+        referralPromo.quota !== null &&
+        referralPromo.usedCount >= referralPromo.quota
+      ) {
+        throw new Error("Promo quota exceeded");
+      }
+    }
   }
 
   // 4. kalkulasi harga
   const basePrice = event.price * quantity;
   let discountAmount = 0;
+
+  if (coupon) {
+    discountAmount = Math.floor((basePrice * coupon.discount) / 100);
+  }
+
+  if (referralPromo) {
+    discountAmount += referralPromo.discountValue * quantity;
+  }
   let pointsUsed = 0;
 
   if (coupon) {
     discountAmount = Math.floor((basePrice * coupon.discount) / 100);
   }
 
-  if (usePoints && !event.isFree) {
-    const activePoints = await getActivePoints(customerId);
-    const priceAfterCoupon = basePrice - discountAmount;
-    pointsUsed = Math.min(activePoints, priceAfterCoupon);
+  const now = new Date();
+
+  const activePromos = await prisma.promotion.findMany({
+    where: {
+      eventId,
+      type: "DATE_BASED",
+      startDate: { lte: now },
+      endDate: { gte: now },
+    },
+  });
+
+  let autoDiscountAmount = 0;
+
+  if (activePromos.length > 0) {
+    const bestPromo = activePromos.reduce((max, p) =>
+      p.discountValue > max.discountValue ? p : max,
+    );
+
+    autoDiscountAmount = bestPromo.discountValue * quantity;
   }
 
-  const finalPrice = Math.max(0, basePrice - discountAmount - pointsUsed);
+  const totalDiscount = discountAmount + autoDiscountAmount;
+
+  if (usePoints && !event.isFree) {
+    const activePoints = await getActivePoints(customerId);
+    const priceAfterDiscount = basePrice - totalDiscount;
+
+    pointsUsed = Math.min(activePoints, priceAfterDiscount);
+  }
+
+  const finalPrice = Math.max(0, basePrice - totalDiscount - pointsUsed);
 
   // 5. ambil data customer
   const customer = await prisma.user.findUnique({
@@ -136,7 +192,14 @@ export async function createTransaction(
         data: { isUsed: true, usedAt: new Date() },
       });
     }
-
+    if (referralPromo) {
+      await tx.promotion.update({
+        where: { id: referralPromo.id },
+        data: {
+          usedCount: { increment: quantity },
+        },
+      });
+    }
     // kurangi poin
     if (pointsUsed > 0) {
       await redeemPoints(tx, customerId, pointsUsed);
