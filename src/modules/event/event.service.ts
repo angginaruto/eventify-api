@@ -50,7 +50,10 @@ export async function getEvents(query: EventQuery) {
       where, // filter
       skip, // offset
       take: limit,
-      orderBy: { startDate: "asc" }, // urutkan dari tanggal terdekat
+     orderBy: [
+        { status: "asc" }, // PUBLISHED duluan baru COMPLETED (alfabet: P > C)
+        { startDate: "asc" }, // dalam status yg sama, urutkan dari tanggal terdekat
+      ], // urutkan dari tanggal terdekat
       include: {
         category: { select: { id: true, name: true, slug: true } }, // include data category tapi hanya id, name, slug
         organizer: { select: { id: true, name: true, avatarUrl: true } }, // include data organizer tapi hanya id, name, avatarUrl
